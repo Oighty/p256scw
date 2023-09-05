@@ -22,10 +22,7 @@ use stylus_sdk::{
 /// Import the p256 elliptic curve library
 use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
 
-// Define the entrypoint as a Solidity storage object, in this case a struct
-// called `Counter` with a single uint256 value called `number`. The sol_storage! macro
-// will generate Rust-equivalent structs with all fields mapped to Solidity-equivalent
-// storage slots and types.
+// Define the entrypoint as a Solidity storage object
 
 // Goal: create a single owner smart contract wallet that can use a p256 signature to approve transactions
 sol_storage! {
@@ -72,20 +69,6 @@ impl P256SCW {
     pub fn nonce(&self) -> Result<U256, Vec<u8>> {
         Ok(self.nonce.get())
     }
-
-    // pub fn domain_separator(&self) -> Result<FixedBytes<32>, Vec<u8>> {
-    //     let chain_id = block::chainid();
-    //     let verifying_contract = contract::address();
-    //     let domain_data = (self.DOMAIN_SEPARATOR_HASH.get(), U256::from(chain_id), verifying_contract);
-    //     let pre_image = encode::<(FixedBytes<32>, U256, Address)>(&domain_data);
-    //     Ok(crypto::keccak(pre_image))
-    // }
-
-    // pub fn encode_transaction_data(&self, to: Address, value: U256, data: Vec<u8>, operation: u8, nonce: U256) -> Result<Vec<u8>, Vec<u8>> {
-    //     let scw_tx = SCWTx::new(to, value, data, operation, nonce);
-    //     let domain = self.domain(block::chainid(), contract::address());
-    //     Ok(scw_tx.eip712_encode_data(&domain))
-    // }
 
     pub fn get_transaction_hash(
         &self,
