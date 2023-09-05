@@ -10,10 +10,17 @@ extern crate alloc;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 /// Import the Stylus SDK along with alloy primitive types for use in our program.
-use stylus_sdk::{alloy_primitives::{Address, U256, FixedBytes}, alloy_sol_types::{sol, eip712_domain, SolStruct}, prelude::*, block, contract, call::RawCall, evm};
+use stylus_sdk::{
+    alloy_primitives::{Address, FixedBytes, U256},
+    alloy_sol_types::{eip712_domain, sol, SolStruct},
+    block,
+    call::RawCall,
+    contract, evm,
+    prelude::*,
+};
 
 /// Import the p256 elliptic curve library
-use p256::ecdsa::{Signature, VerifyingKey, signature::Verifier};
+use p256::ecdsa::{signature::Verifier, Signature, VerifyingKey};
 
 // Define the entrypoint as a Solidity storage object, in this case a struct
 // called `Counter` with a single uint256 value called `number`. The sol_storage! macro
@@ -56,7 +63,6 @@ impl SCWTx {
 // TODO move fn implementations into different blocks based on internal/external/view/pure/etc.
 #[external]
 impl P256SCW {
-
     pub fn constructor(&mut self, public_key: FixedBytes<32>) -> Result<(), Vec<u8>> {
         self.singleton.set(contract::address());
         self.public_key.set(public_key);
@@ -81,9 +87,16 @@ impl P256SCW {
     //     Ok(scw_tx.eip712_encode_data(&domain))
     // }
 
-    pub fn get_transaction_hash(&self, to: Address, value: U256, data: Vec<u8>, operation: u8, nonce: U256) -> Result<FixedBytes<32>, Vec<u8>> {
+    pub fn get_transaction_hash(
+        &self,
+        to: Address,
+        value: U256,
+        data: Vec<u8>,
+        operation: u8,
+        nonce: U256,
+    ) -> Result<FixedBytes<32>, Vec<u8>> {
         let scw_tx = SCWTx::new(to, value, data, operation, nonce);
-        let domain = eip712_domain!{
+        let domain = eip712_domain! {
             name: "P256SCW",
             version: "0.1.0",
             chain_id: block::chainid(),
@@ -96,18 +109,26 @@ impl P256SCW {
         // TODO check signature length to confirm it is valid
 
         let signature = Signature::from_slice(&signature).map_err(|_| "Invalid signature")?;
-        let public_key = VerifyingKey::from_sec1_bytes(self.public_key.get().as_slice()).map_err(|_| "Invalid public key")?;
+        let public_key = VerifyingKey::from_sec1_bytes(self.public_key.get().as_slice())
+            .map_err(|_| "Invalid public key")?;
         Ok(public_key.verify(&digest, &signature).is_ok())
     }
 
-    pub fn exec_transaction(&mut self, to: Address, value: U256, data: Vec<u8>, operation: u8, signature: Vec<u8>) -> Result<bool, Vec<u8>> {
+    pub fn exec_transaction(
+        &mut self,
+        to: Address,
+        value: U256,
+        data: Vec<u8>,
+        operation: u8,
+        signature: Vec<u8>,
+    ) -> Result<bool, Vec<u8>> {
         let nonce = self.nonce.get();
         let tx_hash = self.get_transaction_hash(to, value, data.clone(), operation, nonce)?;
         let signature_valid = self.check_signature(tx_hash.as_slice().to_vec(), signature)?;
         if !signature_valid {
             return Err("Invalid signature".into());
         }
-        
+
         if operation == 0 {
             // Regular call
             unsafe {
@@ -129,9 +150,8 @@ impl P256SCW {
             // Error
             return Err("Invalid operation".into());
         }
-        
+
         self.nonce.set(nonce + U256::from(1));
         Ok(true)
     }
-
 }
