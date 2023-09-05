@@ -90,6 +90,7 @@ impl P256SCW {
 
     pub fn check_signature(&self, digest: Vec<u8>, signature: Vec<u8>) -> Result<bool, Vec<u8>> {
         // TODO check signature length to confirm it is valid
+        // TODO ensure that public key is input in the right format to be parsed by p256
 
         let signature = Signature::from_slice(&signature).map_err(|_| "Invalid signature")?;
         let public_key = VerifyingKey::from_sec1_bytes(self.public_key.get().as_slice())
