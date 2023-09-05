@@ -48,11 +48,11 @@ sol! {
 impl SCWTx {
     pub fn new(to: Address, value: U256, data: Vec<u8>, operation: u8, nonce: U256) -> Self {
         SCWTx {
-            to: to,
-            value: value,
-            data: data,
-            operation: operation,
-            nonce: nonce,
+            to,
+            value,
+            data,
+            operation,
+            nonce,
         }
     }
 }
@@ -114,6 +114,7 @@ impl P256SCW {
 
         if operation == 0 {
             // Regular call
+            // TODO check return value or determine if this will error if the call fails
             unsafe {
                 let _ = RawCall::new_with_value(value)
                     .gas(evm::gas_left())
@@ -123,6 +124,7 @@ impl P256SCW {
         } else if operation == 1 {
             // Delegate call
             // Doesn't pass value amount
+            // TODO check return value or determine if this will error if the call fails
             unsafe {
                 let _ = RawCall::new_delegate()
                     .gas(evm::gas_left())
