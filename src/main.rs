@@ -5,14 +5,12 @@
 #![cfg_attr(not(feature = "export-abi"), no_main)]
 extern crate alloc;
 
-use std::pin::Pin;
-
 /// Initializes a custom, global allocator for Rust programs compiled to WASM.
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 /// Import the Stylus SDK along with alloy primitive types for use in our program.
-use stylus_sdk::{alloy_primitives::{Address, U256, FixedBytes}, alloy_sol_types::{sol, eip712_domain, Eip712Domain, SolStruct}, prelude::*, block, contract, crypto, call::RawCall, evm};
+use stylus_sdk::{alloy_primitives::{Address, U256, FixedBytes}, alloy_sol_types::{sol, eip712_domain, SolStruct}, prelude::*, block, contract, call::RawCall, evm};
 
 /// Import the p256 elliptic curve library
 use p256::ecdsa::{Signature, VerifyingKey, signature::Verifier};
@@ -27,12 +25,9 @@ sol_storage! {
     #[entrypoint]
     pub struct P256SCW {
         address singleton;
-        string VERSION;
-        bytes32 DOMAIN_SEPARATOR_HASH;
-        bytes32 SCW_TX_TYPEHASH;
         uint256 nonce;
         // P256 public key of the owner
-        bytes32 publicKey;
+        bytes32 public_key;
     }
 }
 
@@ -64,7 +59,7 @@ impl P256SCW {
 
     pub fn constructor(&mut self, public_key: FixedBytes<32>) -> Result<(), Vec<u8>> {
         self.singleton.set(contract::address());
-        self.publicKey.set(public_key);
+        self.public_key.set(public_key);
         Ok(())
     }
 
@@ -101,7 +96,7 @@ impl P256SCW {
         // TODO check signature length to confirm it is valid
 
         let signature = Signature::from_slice(&signature).map_err(|_| "Invalid signature")?;
-        let public_key = VerifyingKey::from_sec1_bytes(self.publicKey.get().as_slice()).map_err(|_| "Invalid public key")?;
+        let public_key = VerifyingKey::from_sec1_bytes(self.public_key.get().as_slice()).map_err(|_| "Invalid public key")?;
         Ok(public_key.verify(&digest, &signature).is_ok())
     }
 
@@ -116,15 +111,16 @@ impl P256SCW {
         if operation == 0 {
             // Regular call
             unsafe {
-                RawCall::new_with_value(value)
+                let _ = RawCall::new_with_value(value)
                     .gas(evm::gas_left())
                     .skip_return_data()
                     .call(to, &data);
             }
         } else if operation == 1 {
             // Delegate call
+            // Doesn't pass value amount
             unsafe {
-                RawCall::new_delegate()
+                let _ = RawCall::new_delegate()
                     .gas(evm::gas_left())
                     .skip_return_data()
                     .call(to, &data);
